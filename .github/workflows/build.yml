@@ -1,4 +1,4 @@
-name: Webica Build Final
+name: Webica Secure App Build
 on: [push]
 jobs:
   build:
@@ -11,17 +11,18 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Generate Secure Android Project
+      - name: Setup Project
         run: |
+          # 1. Folders banana
           mkdir -p app/src/main/java/com/webica/app
           mkdir -p app/src/main/res/values
 
-          # 1. Android Manifest
+          # 2. Android Manifest
           cat <<EOF > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
-              <application android:label="Webica Learning" android:theme="@style/Theme.AppCompat.Light.NoActionBar" android:usesCleartextTraffic="true">
+              <application android:label="Webica Learning" android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" android:usesCleartextTraffic="true">
                   <activity android:name="com.webica.app.MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -32,7 +33,7 @@ jobs:
           </manifest>
           EOF
 
-          # 2. MainActivity.java (THE BLACK SCREEN SECURITY)
+          # 3. MainActivity (The Black Screen Code)
           cat <<EOF > app/src/main/java/com/webica/app/MainActivity.java
           package com.webica.app;
           import android.os.Bundle;
@@ -47,7 +48,7 @@ jobs:
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-                  // FLAG_SECURE: This blocks screen recording and screenshots (Black Screen)
+                  // FLAG_SECURE: Screen recording aur Screenshot ko black kar deta hai
                   getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
                   WebView webView = new WebView(this);
                   setContentView(webView);
@@ -62,14 +63,15 @@ jobs:
           }
           EOF
 
-          # 3. Themes
+          # 4. Themes
           cat <<EOF > app/src/main/res/values/themes.xml
-          <resources><style name="Theme.AppCompat.Light.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar"/></resources>
+          <resources><style name="Theme.AppCompat.DayNight.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar"/></resources>
           EOF
 
-          # 4. Correct Build Scripts
+          # 5. Build Scripts
           echo "rootProject.name='WebicaApp'" > settings.gradle
-          
+          echo "include ':app'" >> settings.gradle
+
           cat <<EOF > build.gradle
           buildscript {
               repositories { google(); mavenCentral() }
@@ -98,15 +100,13 @@ jobs:
           }
           EOF
 
-      - name: Setup Gradle Wrapper
-        run: gradle wrapper --gradle-version 8.2
-
-      - name: Build APK with Gradle
+      - name: Build with Gradle
         run: |
+          gradle wrapper --gradle-version 8.2
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Upload Finished APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Webica-Secure-App
