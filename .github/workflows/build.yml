@@ -1,4 +1,4 @@
-name: Webica Secure App Build
+name: Webica APK Generator
 on: [push]
 jobs:
   build:
@@ -11,18 +11,17 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Project
+      - name: Setup Android Project
         run: |
-          # 1. Folders banana
           mkdir -p app/src/main/java/com/webica/app
           mkdir -p app/src/main/res/values
 
-          # 2. Android Manifest
+          # 1. Android Manifest (Permissions)
           cat <<EOF > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
-              <application android:label="Webica Learning" android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" android:usesCleartextTraffic="true">
+              <application android:label="Webica Learning" android:theme="@style/Theme.AppCompat.Light.NoActionBar">
                   <activity android:name="com.webica.app.MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -33,7 +32,7 @@ jobs:
           </manifest>
           EOF
 
-          # 3. MainActivity (The Black Screen Code)
+          # 2. MainActivity.java (THE SECURITY KEY - FLAG_SECURE)
           cat <<EOF > app/src/main/java/com/webica/app/MainActivity.java
           package com.webica.app;
           import android.os.Bundle;
@@ -42,13 +41,11 @@ jobs:
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           import androidx.appcompat.app.AppCompatActivity;
-          import java.util.HashMap;
-          import java.util.Map;
           public class MainActivity extends AppCompatActivity {
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-                  // FLAG_SECURE: Screen recording aur Screenshot ko black kar deta hai
+                  // FLAG_SECURE: Blocks Screen Recording & Screenshot (Black Screen)
                   getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
                   WebView webView = new WebView(this);
                   setContentView(webView);
@@ -56,32 +53,28 @@ jobs:
                   ws.setJavaScriptEnabled(true);
                   ws.setDomStorageEnabled(true);
                   webView.setWebViewClient(new WebViewClient());
-                  Map<String, String> headers = new HashMap<>();
-                  headers.put("X-Requested-With", "com.webica.app");
-                  webView.loadUrl("https://webica.info/player.php", headers);
+                  webView.loadUrl("https://webica.info/player.php");
               }
           }
           EOF
 
-          # 4. Themes
+          # 3. Basic Theme
           cat <<EOF > app/src/main/res/values/themes.xml
-          <resources><style name="Theme.AppCompat.DayNight.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar"/></resources>
+          <resources><style name="Theme.AppCompat.Light.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar"/></resources>
           EOF
 
-          # 5. Build Scripts
+          # 4. Build Scripts
           echo "rootProject.name='WebicaApp'" > settings.gradle
           echo "include ':app'" >> settings.gradle
-
           cat <<EOF > build.gradle
           buildscript {
               repositories { google(); mavenCentral() }
-              dependencies { classpath 'com.android.tools.build:gradle:8.2.0' }
+              dependencies { classpath 'com.android.tools.build:gradle:8.1.0' }
           }
           allprojects {
               repositories { google(); mavenCentral() }
           }
           EOF
-
           cat <<EOF > app/build.gradle
           plugins { id 'com.android.application' }
           android {
@@ -100,14 +93,14 @@ jobs:
           }
           EOF
 
-      - name: Build with Gradle
+      - name: Build APK with Gradle
         run: |
-          gradle wrapper --gradle-version 8.2
+          gradle wrapper --gradle-version 8.1.1
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Upload Final APK
         uses: actions/upload-artifact@v4
         with:
-          name: Webica-Secure-App
+          name: Webica-App
           path: app/build/outputs/apk/debug/app-debug.apk
