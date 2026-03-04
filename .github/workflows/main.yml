@@ -1,0 +1,114 @@
+name: Webica Secure Build Final
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      - name: Create Android Project Structure
+        run: |
+          # 1. Folders taiyar karna
+          mkdir -p app/src/main/java/com/webica/app
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/layout
+
+          # 2. Android Manifest (Permissions & Security)
+          cat <<EOF > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.webica.app">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <application android:label="Webica Learning" android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+                  <activity android:name=".MainActivity" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          # 3. MainActivity.java (THE BLACK SCREEN CODE)
+          cat <<EOF > app/src/main/java/com/webica/app/MainActivity.java
+          package com.webica.app;
+          import android.os.Bundle;
+          import android.view.WindowManager;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import androidx.appcompat.app.AppCompatActivity;
+          import java.util.HashMap;
+          import java.util.Map;
+          public class MainActivity extends AppCompatActivity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  // SCREEN RECORDING BLOCK
+                  getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+                  WebView webView = new WebView(this);
+                  setContentView(webView);
+                  WebSettings ws = webView.getSettings();
+                  ws.setJavaScriptEnabled(true);
+                  ws.setDomStorageEnabled(true);
+                  webView.setWebViewClient(new WebViewClient());
+                  Map<String, String> headers = new HashMap<>();
+                  headers.put("X-Requested-With", "com.webica.app");
+                  webView.loadUrl("https://webica.info/player.php", headers);
+              }
+          }
+          EOF
+
+          # 4. Resources
+          cat <<EOF > app/src/main/res/values/themes.xml
+          <resources><style name="Theme.AppCompat.Light.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar"/></resources>
+          EOF
+
+          # 5. Build Scripts
+          echo "rootProject.name='WebicaApp'" > settings.gradle
+          echo "include ':app'" >> settings.gradle
+
+          cat <<EOF > build.gradle
+          buildscript {
+              repositories { google(); mavenCentral() }
+              dependencies { classpath 'com.android.tools.build:gradle:7.4.2' }
+          }
+          allprojects {
+              repositories { google(); mavenCentral() }
+          }
+          EOF
+
+          cat <<EOF > app/build.gradle
+          apply plugin: 'com.android.application'
+          android {
+              compileSdkVersion 33
+              defaultConfig {
+                  applicationId "com.webica.app"
+                  minSdkVersion 21
+                  targetSdkVersion 33
+                  versionCode 1
+                  versionName "1.0"
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
+          EOF
+
+      - name: Build APK
+        run: |
+          gradle wrapper --gradle-version 7.5
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload Final APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: Webica-App
+          path: app/build/outputs/apk/debug/app-debug.apk
